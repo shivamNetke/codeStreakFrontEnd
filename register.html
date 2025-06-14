@@ -7,12 +7,39 @@
 <body>
   <div class="container">
     <h2>Register</h2>
-    <form action="https://codestreak.onrender.com/register" method="POST">
-  <input type="text" name="username" placeholder="Username" required />
-  <input type="password" name="password" placeholder="Password" required />
-  <button type="submit">Register</button>
-</form>
-
+    <form id="registerForm">
+      <input type="text" id="username" placeholder="Username" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <button type="submit">Register</button>
+    </form>
+    <p id="responseMsg"></p>
   </div>
+
+  <script>
+    const form = document.getElementById('registerForm');
+    const msg = document.getElementById('responseMsg');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const response = await fetch('https://codestreak.onrender.com/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+        msg.textContent = data.message;
+        msg.style.color = data.success ? 'green' : 'red';
+      } catch (err) {
+        msg.textContent = 'Something went wrong';
+        msg.style.color = 'red';
+      }
+    });
+  </script>
 </body>
 </html>
