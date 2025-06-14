@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Login</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -33,9 +35,13 @@
         });
 
         const data = await response.json();
-        msg.textContent = data.message;
-        msg.style.color = data.success ? 'green' : 'red';
 
+        if (data.success) {
+          window.location.href = 'codestreakk.html';
+        } else {
+          msg.textContent = data.message;
+          msg.style.color = 'red';
+        }
       } catch (err) {
         msg.textContent = 'Something went wrong';
         msg.style.color = 'red';
