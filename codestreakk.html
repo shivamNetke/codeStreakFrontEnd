@@ -9,6 +9,8 @@
 <body>
   <div class="container">
     <h2>Welcome to CodeStreak</h2>
+    <button onclick="logout()">Logout</button>
+
     <textarea id="code-input" rows="10" placeholder="Paste your code here..."></textarea>
     <button onclick="submitCode()">Submit Code</button>
     <p id="message"></p>
@@ -17,18 +19,21 @@
     <p id="streak">Loading...</p>
 
     <h3>Submission Calendar</h3>
-    <div id="calendar" style="display: flex; flex-wrap: wrap;"></div>
+    <div id="calendar"></div>
 
     <h3>Your Submission History</h3>
     <ul id="history"></ul>
   </div>
 
   <script>
-    const API_URL = 'https://codestreak.onrender.com';
-
     function getTodayDateStr() {
       const today = new Date();
       return today.toISOString().split('T')[0];
+    }
+
+    function logout() {
+      localStorage.removeItem('username');
+      window.location.href = 'login.html';
     }
 
     async function submitCode() {
@@ -42,7 +47,7 @@
         return;
       }
 
-      const res = await fetch(`${API_URL}/submit-code`, {
+      const res = await fetch('https://codestreak.onrender.com/submit-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, code, date: today })
@@ -62,11 +67,15 @@
       const username = localStorage.getItem('username');
       if (!username) return;
 
-      const res = await fetch(`${API_URL}/get-data/${username}`);
-      const data = await res.json();
+      const res = await fetch('https://codestreak.onrender.com/get-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
 
+      const data = await res.json();
       if (data.success) {
-        const codes = data.data;
+        const codes = data.codes;
         updateCalendar(codes);
         updateHistory(codes);
         updateStreak(codes);
@@ -84,7 +93,6 @@
         div.style.background = '#90ee90';
         div.style.margin = '2px';
         div.style.padding = '4px';
-        div.style.borderRadius = '6px';
         calendar.appendChild(div);
       });
     }
@@ -108,7 +116,9 @@
 
       for (const date of dates) {
         const codeDate = new Date(date);
-        if (codeDate.toDateString() === currentDate.toDateString()) {
+        if (
+          codeDate.toDateString() === currentDate.toDateString()
+        ) {
           streak++;
           currentDate.setDate(currentDate.getDate() - 1);
         } else {

@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Register</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -8,15 +10,10 @@
   <div class="container">
     <h2>Register</h2>
     <form id="registerForm">
-      <input type="text" id="username" placeholder="Username" required />
-      <input type="password" id="password" placeholder="Password" required />
+      <input type="text" id="regUsername" placeholder="Username" required />
+      <input type="password" id="regPassword" placeholder="Password" required />
       <button type="submit">Register</button>
-      
-    </form><br>
-    <a href="https://codestreak.netlify.app/login">
-  <button type="button">Go to Login</button>
-</a>
-
+    </form>
     <p id="responseMsg"></p>
   </div>
 
@@ -27,8 +24,8 @@
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
+      const username = document.getElementById('regUsername').value.trim();
+      const password = document.getElementById('regPassword').value.trim();
 
       try {
         const response = await fetch('https://codestreak.onrender.com/register', {
@@ -38,10 +35,16 @@
         });
 
         const data = await response.json();
-        msg.textContent = data.message;
-        msg.style.color = data.success ? 'green' : 'red';
+
+        if (data.success) {
+          msg.textContent = 'Registration successful! You can now log in.';
+          msg.style.color = 'green';
+        } else {
+          msg.textContent = data.message;
+          msg.style.color = 'red';
+        }
       } catch (err) {
-        msg.textContent = 'Something went wrong';
+        msg.textContent = 'Something went wrong.';
         msg.style.color = 'red';
       }
     });
