@@ -2,293 +2,124 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Code Streak Tracker</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #f0f0f0;
-      margin: 0;
-      padding: 0;
-    }
-
-    .main {
-      display: flex;
-      min-height: 100vh;
-    }
-
-    .left-panel, .right-panel {
-      padding: 20px;
-      flex: 1;
-      box-sizing: border-box;
-    }
-
-    .left-panel {
-      background: #fff;
-      box-shadow: 0 0 10px #ccc;
-    }
-
-    .right-panel {
-      background: #fafafa;
-      border-left: 1px solid #ddd;
-      max-width: 300px;
-      overflow-y: auto;
-    }
-
-    #calendar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      margin: 20px 0;
-      max-width: 250px;
-    }
-
-    .day-box {
-      width: 20px;
-      height: 20px;
-      border-radius: 4px;
-      text-align: center;
-      font-size: 10px;
-      line-height: 20px;
-      cursor: pointer;
-      border: 1px solid #ccc;
-    }
-
-    .green {
-      background-color: #00b894;
-      color: white;
-    }
-
-    .gray {
-      background-color: #dfe6e9;
-      color: #636e72;
-    }
-
-    .day-box:hover {
-      outline: 2px solid #0984e3;
-    }
-
-    textarea {
-      width: 100%;
-      height: 200px;
-      margin: 20px 0;
-      padding: 10px;
-      font-family: monospace;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      resize: vertical;
-    }
-
-    button {
-      background-color: #00b894;
-      color: white;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    button:hover {
-      background-color: #019875;
-    }
-
-    #history-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .history-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: white;
-      padding: 10px;
-      border-radius: 6px;
-      box-shadow: 0 0 3px #ccc;
-    }
-
-    .popup {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 999;
-    }
-
-    .popup-content {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      width: 90%;
-      max-width: 600px;
-      max-height: 80vh;
-      overflow: auto;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    pre {
-      background: #f4f4f4;
-      padding: 10px;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CodeStreak</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="main">
-    <!-- Left Panel -->
-    <div class="left-panel">
-      <h1>🔥 Your Coding Streak: <span id="streak-count">0</span> Days</h1>
+  <div class="container">
+    <h2>Welcome to CodeStreak</h2>
+    <textarea id="code-input" rows="10" placeholder="Paste your code here..."></textarea>
+    <button onclick="submitCode()">Submit Code</button>
+    <p id="message"></p>
 
-      <div id="calendar"></div>
+    <h3>Your Streak</h3>
+    <p id="streak">Loading...</p>
 
-      <textarea id="code-input" placeholder="Paste your code here..."></textarea>
-      <button onclick="submitCode()">Submit Today's Code</button>
-      <p id="message"></p>
-    </div>
+    <h3>Submission Calendar</h3>
+    <div id="calendar" style="display: flex; flex-wrap: wrap;"></div>
 
-    <!-- Right Panel -->
-    <div class="right-panel">
-      <h2>📅 Previous Days</h2>
-      <div id="history-list"></div>
-    </div>
-  </div>
-
-  <!-- Popup -->
-  <div id="popup" class="popup hidden">
-    <div class="popup-content">
-      <h3 id="popup-date"></h3>
-      <pre id="popup-code"></pre>
-      <button onclick="closePopup()">Close</button>
-    </div>
+    <h3>Your Submission History</h3>
+    <ul id="history"></ul>
   </div>
 
   <script>
+    const API_URL = 'https://codestreak.onrender.com';
+
     function getTodayDateStr() {
       const today = new Date();
       return today.toISOString().split('T')[0];
     }
 
-    function getYesterdayDateStr() {
-      const yesterday = new Date(Date.now() - 86400000);
-      return yesterday.toISOString().split('T')[0];
-    }
-
-    function submitCode() {
+    async function submitCode() {
       const code = document.getElementById('code-input').value.trim();
       const message = document.getElementById('message');
       const today = getTodayDateStr();
+      const username = localStorage.getItem('username');
 
-      if (!code) {
-        message.textContent = "Please paste your code before submitting.";
+      if (!username || !code) {
+        message.textContent = "Login required and code cannot be empty.";
         return;
       }
 
-      const lastDate = localStorage.getItem('lastDate');
-      let streak = parseInt(localStorage.getItem('streak') || "0");
+      const res = await fetch(`${API_URL}/submit-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, code, date: today })
+      });
 
-      if (lastDate === today) {
-        message.textContent = "You've already submitted code today!";
-        return;
-      }
-
-      if (lastDate === getYesterdayDateStr()) {
-        streak += 1;
+      const data = await res.json();
+      if (data.success) {
+        message.textContent = "Code submitted successfully! 🔥";
+        document.getElementById('code-input').value = "";
+        fetchCodesAndRender();
       } else {
-        streak = 1;
+        message.textContent = data.message;
       }
-
-      localStorage.setItem('lastDate', today);
-      localStorage.setItem('streak', streak);
-      localStorage.setItem(`code_${today}`, code);
-
-      document.getElementById('streak-count').textContent = streak;
-      message.textContent = "Code submitted successfully! 🔥";
-      document.getElementById('code-input').value = "";
-
-      loadHistory();
-      loadCalendar();
     }
 
-    function loadStreak() {
-      const streak = localStorage.getItem('streak') || 0;
-      document.getElementById('streak-count').textContent = streak;
+    async function fetchCodesAndRender() {
+      const username = localStorage.getItem('username');
+      if (!username) return;
+
+      const res = await fetch(`${API_URL}/get-data/${username}`);
+      const data = await res.json();
+
+      if (data.success) {
+        const codes = data.data;
+        updateCalendar(codes);
+        updateHistory(codes);
+        updateStreak(codes);
+      }
     }
 
-    function loadHistory() {
-      const historyList = document.getElementById('history-list');
-      historyList.innerHTML = "";
+    function updateCalendar(codes) {
+      const calendar = document.getElementById('calendar');
+      calendar.innerHTML = "";
+      const sortedDates = Object.keys(codes).sort();
 
-      const keys = Object.keys(localStorage)
-        .filter(k => k.startsWith("code_"))
-        .sort()
-        .reverse();
-
-      keys.forEach(key => {
-        const date = key.split("_")[1];
-        const item = document.createElement("div");
-        item.className = "history-item";
-        item.innerHTML = `
-          <span>${date}</span>
-          <button onclick="showCode('${date}')">View Code</button>
-        `;
-        historyList.appendChild(item);
+      sortedDates.forEach(date => {
+        const div = document.createElement('div');
+        div.textContent = date;
+        div.style.background = '#90ee90';
+        div.style.margin = '2px';
+        div.style.padding = '4px';
+        div.style.borderRadius = '6px';
+        calendar.appendChild(div);
       });
     }
 
-    function loadCalendar() {
-      const calendar = document.getElementById("calendar");
-      calendar.innerHTML = "";
+    function updateHistory(codes) {
+      const history = document.getElementById('history');
+      history.innerHTML = "";
+      const sorted = Object.entries(codes).sort((a, b) => new Date(b[0]) - new Date(a[0]));
 
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      sorted.forEach(([date, code]) => {
+        const li = document.createElement('li');
+        li.textContent = `${date}: ${code.slice(0, 30)}...`;
+        history.appendChild(li);
+      });
+    }
 
-      for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const box = document.createElement("div");
-        box.className = "day-box";
+    function updateStreak(codes) {
+      const dates = Object.keys(codes).sort().reverse();
+      let streak = 0;
+      let currentDate = new Date();
 
-        if (localStorage.getItem(`code_${dateStr}`)) {
-          box.classList.add("green");
+      for (const date of dates) {
+        const codeDate = new Date(date);
+        if (codeDate.toDateString() === currentDate.toDateString()) {
+          streak++;
+          currentDate.setDate(currentDate.getDate() - 1);
         } else {
-          box.classList.add("gray");
+          break;
         }
-
-        box.title = dateStr;
-        box.textContent = day;
-        box.onclick = () => showCode(dateStr);
-        calendar.appendChild(box);
       }
+
+      document.getElementById('streak').textContent = `${streak} day streak!`;
     }
 
-    function showCode(date) {
-      const code = localStorage.getItem(`code_${date}`) || "No code found.";
-      document.getElementById("popup-code").textContent = code;
-      document.getElementById("popup-date").textContent = `Code from ${date}`;
-      document.getElementById("popup").classList.remove("hidden");
-    }
-
-    function closePopup() {
-      document.getElementById("popup").classList.add("hidden");
-    }
-
-    window.onload = function () {
-      loadStreak();
-      loadHistory();
-      loadCalendar();
-    };
+    fetchCodesAndRender();
   </script>
 </body>
 </html>

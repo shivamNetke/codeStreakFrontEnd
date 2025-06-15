@@ -1,67 +1,125 @@
-// Utility to get users from "details.txt" (simulated via localStorage)
-function getStoredUsers() {
-  const data = localStorage.getItem("users_txt");
-  if (!data) return [];
-  return data.split("\n").map(line => {
-    const [username, token] = line.split(":");
-    return { username, token };
-  });
-}
-
-// Save user into "details.txt" format
-function storeNewUser(username, password) {
-  const token = btoa(password);
-  const users = getStoredUsers();
-
-  if (users.find(u => u.username === username)) {
-    return false; // User already exists
-  }
-
-  users.push({ username, token });
-  const newData = users.map(u => `${u.username}:${u.token}`).join("\n");
-  localStorage.setItem("users_txt", newData);
-  return true;
-}
-
-// Validate login credentials
-function validateUser(username, password) {
-  const token = btoa(password);
-  const users = getStoredUsers();
-  return users.find(u => u.username === username && u.token === token);
-}
+const API_URL = 'https://codestreak.onrender.com'; // Change if hosted locally
 
 // Handle Login
 if (document.getElementById("loginForm")) {
-  document.getElementById("loginForm").addEventListener("submit", function(e) {
+  document.getElementById("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const user = document.getElementById("username").value.trim();
-    const pass = document.getElementById("password").value.trim();
-    const msg = document.getElementById("message");
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const msg = document.getElementById("responseMsg");
 
-    if (validateUser(user, pass)) {
-      msg.style.color = "green";
-      msg.textContent = "Login successful!";
-    } else {
-      msg.style.color = "red";
-      msg.textContent = "Invalid username or password.";
+    try {
+      const res = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem("username", username);
+        window.location.href = "codestreakk.html";
+      } else {
+        msg.textContent = data.message || 'Invalid credentials';
+        msg.style.color = 'red';
+      }
+    } catch (err) {
+      msg.textContent = 'Login failed. Try again later.';
+      msg.style.color = 'red';
     }
   });
 }
 
 // Handle Registration
 if (document.getElementById("registerForm")) {
-  document.getElementById("registerForm").addEventListener("submit", function(e) {
+  document.getElementById("registerForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const user = document.getElementById("regUsername").value.trim();
-    const pass = document.getElementById("regPassword").value.trim();
-    const msg = document.getElementById("message");
+    const username = document.getElementById("regUsername").value.trim();
+    const password = document.getElementById("regPassword").value.trim();
+    const msg = document.getElementById("responseMsg");
 
-    if (storeNewUser(user, pass)) {
-      msg.style.color = "green";
-      msg.textContent = "Registered successfully. You can now login.";
+    try {
+      const res = await fetch(`${API_URL}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        msg.textContent = 'Registration successful! You can login now.';
+        msg.style.color = 'green';
+      } else {
+        msg.textContent = data.message || 'Registration failed';
+        msg.style.color = 'red';
+      }
+    } catch (err) {
+      msg.textContent = 'Server error during registration.';
+      msg.style.color = 'red';
+    }
+  });
+}
+
+// ---- codestreakk.html logic ----
+if (window.location.pathname.includes("codestreakk.html")) {
+  const username = localStorage.getItem("username");
+  const codeArea = document.getElementById("codeArea");
+  const saveBtn = document.getElementById("saveCode");
+  const streakDiv = document.getElementById("streak");
+
+  if (!username) {
+    alert("Please login first");
+    window.location.href = "login.html";
+  }
+
+  // Load saved code for user
+  fetch(`${API_URL}/get-data/${username}`)
+    .then(res => res.json())
+    .then(result => {
+      if (result.success) {
+        const entries = Object.entries(result.data);
+        entries.sort((a, b) => new Date(b[0]) - new Date(a[0]));
+
+        let streakCount = 0;
+        const today = new Date().toISOString().slice(0, 10);
+        if (result.data[today]) {
+          streakCount = 1;
+          let d = new Date(today);
+          while (true) {
+            d.setDate(d.getDate() - 1);
+            const prev = d.toISOString().slice(0, 10);
+            if (result.data[prev]) streakCount++;
+            else break;
+          }
+        }
+
+        streakDiv.innerHTML = `<strong>Code Streak:</strong> ${streakCount} day(s)`;
+
+        if (entries.length > 0) {
+          codeArea.value = entries[0][1];
+        }
+      }
+    });
+
+  // Save code
+  saveBtn.addEventListener("click", async () => {
+    const code = codeArea.value.trim();
+    const date = new Date().toISOString().slice(0, 10);
+
+    if (!code) return alert("Write some code!");
+
+    const res = await fetch(`${API_URL}/submit-code`, {
+      method: "POST",
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, code, date })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      alert("Code saved successfully!");
+      window.location.reload();
     } else {
-      msg.style.color = "red";
-      msg.textContent = "Username already exists.";
+      alert("Error saving code.");
     }
   });
 }
