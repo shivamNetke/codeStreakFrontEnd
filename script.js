@@ -1,6 +1,6 @@
 const API_URL = 'https://codestreak.onrender.com'; // Change if hosted locally
 
-// Handle Login
+// ----- Handle Login -----
 if (document.getElementById("loginForm")) {
   document.getElementById("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -30,7 +30,7 @@ if (document.getElementById("loginForm")) {
   });
 }
 
-// Handle Registration
+// ----- Handle Registration -----
 if (document.getElementById("registerForm")) {
   document.getElementById("registerForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -60,7 +60,7 @@ if (document.getElementById("registerForm")) {
   });
 }
 
-// ---- codestreakk.html logic ----
+// ----- codestreakk.html logic -----
 if (window.location.pathname.includes("codestreakk.html")) {
   const username = localStorage.getItem("username");
   const codeArea = document.getElementById("codeArea");
@@ -72,33 +72,45 @@ if (window.location.pathname.includes("codestreakk.html")) {
     window.location.href = "login.html";
   }
 
-  // Load saved code for user
-  fetch(`${API_URL}/get-data/${username}`)
+  // Load saved code and streak
+  fetch(`${API_URL}/get-codes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username })
+  })
     .then(res => res.json())
     .then(result => {
-      if (result.success) {
-        const entries = Object.entries(result.data);
+      if (result.success && result.codes) {
+        const entries = Object.entries(result.codes);
         entries.sort((a, b) => new Date(b[0]) - new Date(a[0]));
 
+        // Calculate streak
         let streakCount = 0;
         const today = new Date().toISOString().slice(0, 10);
-        if (result.data[today]) {
+        if (result.codes[today]) {
           streakCount = 1;
           let d = new Date(today);
           while (true) {
             d.setDate(d.getDate() - 1);
             const prev = d.toISOString().slice(0, 10);
-            if (result.data[prev]) streakCount++;
+            if (result.codes[prev]) streakCount++;
             else break;
           }
         }
 
         streakDiv.innerHTML = `<strong>Code Streak:</strong> ${streakCount} day(s)`;
 
+        // Load latest code
         if (entries.length > 0) {
           codeArea.value = entries[0][1];
         }
+      } else {
+        streakDiv.innerHTML = "No code found.";
       }
+    })
+    .catch(err => {
+      console.error("Error loading streak:", err);
+      streakDiv.innerHTML = `<span style="color:red">Failed to load streak</span>`;
     });
 
   // Save code
